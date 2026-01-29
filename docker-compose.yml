@@ -18,6 +18,9 @@ services:
     container_name: prompt-frontend
     ports:
       - "3000:80"
+    volumes:
+      # Use docker-compose specific nginx config with backend proxy
+      - ./frontend/nginx.docker-compose.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - backend
     restart: unless-stopped
