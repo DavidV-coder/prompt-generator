@@ -7,13 +7,26 @@ import type {
   TestApiResponse,
 } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+// API URL настраивается через localStorage в AdminPanel
+// По умолчанию используем относительный путь для локальной разработки
+const getApiBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    const savedUrl = localStorage.getItem('prompt-generator-api-url');
+    if (savedUrl) return savedUrl;
+  }
+  return 'http://localhost:8000'; // для локальной разработки
+};
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+// Обновляем baseURL перед каждым запросом
+api.interceptors.request.use((config) => {
+  config.baseURL = getApiBaseUrl();
+  return config;
 });
 
 export async function getProviders(): Promise<Provider[]> {
