@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     # Database
-    database_url: str = "postgresql+asyncpg://admin:secret@localhost:5432/prompting"
+    database_url: str = "sqlite+aiosqlite:///./data/prompting.db"
 
     # AI Providers API Keys
     openai_api_key: str = ""

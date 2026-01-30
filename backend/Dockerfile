@@ -9,6 +9,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
+# Create data directory for SQLite database
+RUN mkdir -p /app/data
+
 # Expose port (Railway uses $PORT variable)
 EXPOSE 8000
 
