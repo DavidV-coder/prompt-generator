@@ -24,10 +24,7 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # Copy nginx config template
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 
-# Railway requires listening on $PORT
-ENV PORT=80
-
-EXPOSE 80
+EXPOSE 8080
 
 # The nginx image will automatically process templates and substitute env vars
 CMD ["/docker-entrypoint.sh", "nginx", "-g", "daemon off;"]
