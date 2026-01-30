@@ -1,29 +1,39 @@
 """
 Multi-provider AI service for prompt generation.
-Supports: OpenAI, Anthropic (Claude), OpenRouter, xAI (Grok), ZAI
+Supports: OpenAI, Anthropic, Google, OpenRouter, Groq, DeepSeek, Mistral, Cohere, Perplexity, Together AI
 """
 
 import httpx
 from openai import AsyncOpenAI
 from anthropic import AsyncAnthropic
+import google.generativeai as genai
 
-from ..schemas.prompt import ProviderEnum, PROVIDER_MODELS
+from ..schemas.prompt import ProviderEnum, PROVIDER_MODELS, PROVIDER_LABELS
 
 
 # Provider base URLs
 PROVIDER_URLS = {
     ProviderEnum.openrouter: "https://openrouter.ai/api/v1",
-    ProviderEnum.xai: "https://api.x.ai/v1",
-    ProviderEnum.zai: "https://api.zai.chat/v1",
+    ProviderEnum.groq: "https://api.groq.com/openai/v1",
+    ProviderEnum.deepseek: "https://api.deepseek.com/v1",
+    ProviderEnum.mistral: "https://api.mistral.ai/v1",
+    ProviderEnum.cohere: "https://api.cohere.ai/v1",
+    ProviderEnum.perplexity: "https://api.perplexity.ai",
+    ProviderEnum.together: "https://api.together.xyz/v1",
 }
 
 # Default models for each provider
 DEFAULT_MODELS = {
-    ProviderEnum.openai: "gpt-5",
-    ProviderEnum.anthropic: "claude-opus-4-20250514",
+    ProviderEnum.openai: "gpt-4o",
+    ProviderEnum.anthropic: "claude-3-5-sonnet-20241022",
+    ProviderEnum.google: "gemini-2.0-flash-exp",
     ProviderEnum.openrouter: "qwen/qwen3-coder:free",
-    ProviderEnum.xai: "grok-3",
-    ProviderEnum.zai: "zai-2",
+    ProviderEnum.groq: "llama-3.3-70b-versatile",
+    ProviderEnum.deepseek: "deepseek-chat",
+    ProviderEnum.mistral: "mistral-large-latest",
+    ProviderEnum.cohere: "command-r-plus",
+    ProviderEnum.perplexity: "llama-3.1-sonar-large-128k-online",
+    ProviderEnum.together: "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
 }
 
 
@@ -75,6 +85,48 @@ def parse_prompts(content: str) -> list[str]:
     return cleaned_prompts[:5] if cleaned_prompts else ["Не удалось сгенерировать промпты. Попробуйте ещё раз."]
 
 
+async def test_openai_compatible(provider: ProviderEnum, api_key: str, test_model: str) -> dict:
+    """Test OpenAI-compatible API."""
+    async with httpx.AsyncClient() as client:
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+
+        # OpenRouter requires additional headers
+        if provider == ProviderEnum.openrouter:
+            headers["HTTP-Referer"] = "https://prompt-generator.app"
+            headers["X-Title"] = "Prompt Generator"
+
+        try:
+            response = await client.post(
+                f"{PROVIDER_URLS[provider]}/chat/completions",
+                headers=headers,
+                json={
+                    "model": test_model,
+                    "messages": [{"role": "user", "content": "Hi"}],
+                    "max_tokens": 5,
+                },
+                timeout=30.0,
+            )
+
+            if response.status_code == 200:
+                return {"success": True, "message": f"API ключ {PROVIDER_LABELS[provider]} работает ✓"}
+            elif response.status_code == 401:
+                return {"success": False, "message": "Неверный API ключ"}
+            elif response.status_code == 402:
+                return {"success": False, "message": "Недостаточно средств на счёте"}
+            elif response.status_code == 429:
+                return {"success": False, "message": "Превышен лимит запросов"}
+            else:
+                error_text = response.text[:200] if response.text else ""
+                return {"success": False, "message": f"Ошибка {response.status_code}: {error_text}"}
+        except httpx.TimeoutException:
+            return {"success": False, "message": "Превышено время ожидания"}
+        except Exception as e:
+            return {"success": False, "message": f"Ошибка: {str(e)}"}
+
+
 async def test_api_key(provider: ProviderEnum, api_key: str) -> dict:
     """
     Test if an API key is valid for the given provider.
@@ -87,103 +139,28 @@ async def test_api_key(provider: ProviderEnum, api_key: str) -> dict:
         if provider == ProviderEnum.openai:
             client = AsyncOpenAI(api_key=api_key)
             await client.models.list()
-            return {"success": True, "message": "API ключ OpenAI работает"}
+            return {"success": True, "message": "API ключ OpenAI работает ✓"}
 
         elif provider == ProviderEnum.anthropic:
             client = AsyncAnthropic(api_key=api_key)
-            # Simple test - try to create a minimal message
             await client.messages.create(
                 model="claude-3-haiku-20240307",
                 max_tokens=10,
                 messages=[{"role": "user", "content": "Hi"}],
             )
-            return {"success": True, "message": "API ключ Anthropic работает"}
+            return {"success": True, "message": "API ключ Anthropic работает ✓"}
 
-        elif provider == ProviderEnum.openrouter:
-            # Make a real API call to verify the key works
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{PROVIDER_URLS[provider]}/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json",
-                        "HTTP-Referer": "https://prompt-generator.local",
-                        "X-Title": "Prompt Generator",
-                    },
-                    json={
-                        "model": "qwen/qwen3-coder:free",
-                        "messages": [{"role": "user", "content": "Hi"}],
-                        "max_tokens": 5,
-                    },
-                    timeout=30.0,
-                )
-                if response.status_code == 200:
-                    return {"success": True, "message": "API ключ OpenRouter работает"}
-                elif response.status_code == 401:
-                    return {"success": False, "message": "Неверный API ключ"}
-                elif response.status_code == 402:
-                    return {"success": False, "message": "Недостаточно средств на счёте"}
-                elif response.status_code == 429:
-                    return {"success": False, "message": "Превышен лимит запросов, попробуйте позже"}
-                else:
-                    error_text = response.text[:200] if response.text else ""
-                    return {"success": False, "message": f"Ошибка {response.status_code}: {error_text}"}
+        elif provider == ProviderEnum.google:
+            genai.configure(api_key=api_key)
+            # Try to list models
+            models = genai.list_models()
+            list(models)  # Force evaluation
+            return {"success": True, "message": "API ключ Google AI работает ✓"}
 
-        elif provider == ProviderEnum.xai:
-            # Make a real API call to verify the key works
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{PROVIDER_URLS[provider]}/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "model": "grok-beta",
-                        "messages": [{"role": "user", "content": "Hi"}],
-                        "max_tokens": 5,
-                    },
-                    timeout=30.0,
-                )
-                if response.status_code == 200:
-                    return {"success": True, "message": "API ключ xAI работает"}
-                elif response.status_code == 401:
-                    return {"success": False, "message": "Неверный API ключ"}
-                elif response.status_code == 402:
-                    return {"success": False, "message": "Недостаточно средств на счёте"}
-                elif response.status_code == 429:
-                    return {"success": False, "message": "Превышен лимит запросов"}
-                else:
-                    error_text = response.text[:200] if response.text else ""
-                    return {"success": False, "message": f"Ошибка {response.status_code}: {error_text}"}
-
-        elif provider == ProviderEnum.zai:
-            # Make a real API call to verify the key works
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{PROVIDER_URLS[provider]}/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "model": "zai-1",
-                        "messages": [{"role": "user", "content": "Hi"}],
-                        "max_tokens": 5,
-                    },
-                    timeout=30.0,
-                )
-                if response.status_code == 200:
-                    return {"success": True, "message": "API ключ ZAI работает"}
-                elif response.status_code == 401:
-                    return {"success": False, "message": "Неверный API ключ"}
-                elif response.status_code == 402:
-                    return {"success": False, "message": "Недостаточно средств на счёте"}
-                elif response.status_code == 429:
-                    return {"success": False, "message": "Превышен лимит запросов"}
-                else:
-                    error_text = response.text[:200] if response.text else ""
-                    return {"success": False, "message": f"Ошибка {response.status_code}: {error_text}"}
+        elif provider in PROVIDER_URLS:
+            # Use default model for testing
+            test_model = DEFAULT_MODELS.get(provider, "")
+            return await test_openai_compatible(provider, api_key, test_model)
 
         return {"success": False, "message": "Неизвестный провайдер"}
 
@@ -216,6 +193,24 @@ async def generate_with_anthropic(api_key: str, model: str, business: str, role:
         messages=[{"role": "user", "content": get_user_message(business, role)}],
     )
     return response.content[0].text if response.content else ""
+
+
+async def generate_with_google(api_key: str, model: str, business: str, role: str, custom_prompt: str = "") -> str:
+    """Generate using Google Generative AI API."""
+    genai.configure(api_key=api_key)
+    model_instance = genai.GenerativeModel(
+        model_name=model,
+        generation_config={
+            "temperature": 0.7,
+            "max_output_tokens": 2000,
+        },
+    )
+
+    # Combine system prompt and user message for Google
+    full_prompt = f"{get_system_prompt(role, business, custom_prompt)}\n\n{get_user_message(business, role)}"
+
+    response = await model_instance.generate_content_async(full_prompt)
+    return response.text if response.text else ""
 
 
 async def generate_with_http(
@@ -287,7 +282,11 @@ async def generate_prompts(
     elif provider == ProviderEnum.anthropic:
         content = await generate_with_anthropic(api_key, model, business, role, system_prompt)
 
-    elif provider in (ProviderEnum.openrouter, ProviderEnum.xai, ProviderEnum.zai):
+    elif provider == ProviderEnum.google:
+        content = await generate_with_google(api_key, model, business, role, system_prompt)
+
+    elif provider in PROVIDER_URLS:
+        # All other providers use OpenAI-compatible API
         base_url = PROVIDER_URLS[provider]
         content = await generate_with_http(base_url, api_key, model, business, role, provider, system_prompt)
 

@@ -6,17 +6,27 @@ class ProviderEnum(str, Enum):
     """Available AI providers."""
     openai = "openai"
     anthropic = "anthropic"
+    google = "google"
     openrouter = "openrouter"
-    xai = "xai"
-    zai = "zai"
+    groq = "groq"
+    deepseek = "deepseek"
+    mistral = "mistral"
+    cohere = "cohere"
+    perplexity = "perplexity"
+    together = "together"
 
 
 PROVIDER_LABELS = {
     ProviderEnum.openai: "OpenAI",
     ProviderEnum.anthropic: "Anthropic",
+    ProviderEnum.google: "Google AI (Gemini)",
     ProviderEnum.openrouter: "OpenRouter",
-    ProviderEnum.xai: "xAI",
-    ProviderEnum.zai: "ZAI",
+    ProviderEnum.groq: "Groq",
+    ProviderEnum.deepseek: "DeepSeek",
+    ProviderEnum.mistral: "Mistral AI",
+    ProviderEnum.cohere: "Cohere",
+    ProviderEnum.perplexity: "Perplexity",
+    ProviderEnum.together: "Together AI",
 }
 
 
@@ -94,25 +104,74 @@ PROVIDER_MODELS = {
         {"id": "mistralai/mistral-large", "name": "Mistral Large"},
         {"id": "qwen/qwen-2.5-72b-instruct", "name": "Qwen 2.5 72B"},
     ],
-    ProviderEnum.xai: [
-        # Grok 3 series (latest)
-        {"id": "grok-3", "name": "Grok 3"},
-        {"id": "grok-3-turbo", "name": "Grok 3 Turbo"},
-        {"id": "grok-3-mini", "name": "Grok 3 Mini"},
-        # Grok 2 series
-        {"id": "grok-2", "name": "Grok 2"},
-        {"id": "grok-2-mini", "name": "Grok 2 Mini"},
-        {"id": "grok-2-vision", "name": "Grok 2 Vision"},
-        # Grok Beta
-        {"id": "grok-beta", "name": "Grok Beta"},
+    ProviderEnum.google: [
+        # Gemini 2.0 series (latest - January 2026)
+        {"id": "gemini-2.0-flash-exp", "name": "Gemini 2.0 Flash (Experimental)"},
+        {"id": "gemini-2.0-flash-thinking-exp", "name": "Gemini 2.0 Flash Thinking"},
+        # Gemini 1.5 series
+        {"id": "gemini-1.5-pro", "name": "Gemini 1.5 Pro"},
+        {"id": "gemini-1.5-flash", "name": "Gemini 1.5 Flash"},
+        {"id": "gemini-1.5-flash-8b", "name": "Gemini 1.5 Flash 8B"},
+        # Gemini Pro
+        {"id": "gemini-pro", "name": "Gemini Pro"},
     ],
-    ProviderEnum.zai: [
-        # ZAI models
-        {"id": "zai-2", "name": "ZAI-2"},
-        {"id": "zai-2-turbo", "name": "ZAI-2 Turbo"},
-        {"id": "zai-1", "name": "ZAI-1"},
-        {"id": "zai-1-turbo", "name": "ZAI-1 Turbo"},
-        {"id": "zai-coder", "name": "ZAI Coder"},
+    ProviderEnum.groq: [
+        # Meta models on Groq (fastest inference)
+        {"id": "llama-3.3-70b-versatile", "name": "Llama 3.3 70B"},
+        {"id": "llama-3.1-70b-versatile", "name": "Llama 3.1 70B"},
+        {"id": "llama-3.1-8b-instant", "name": "Llama 3.1 8B (Instant)"},
+        {"id": "llama-guard-3-8b", "name": "Llama Guard 3 8B"},
+        # Mixtral on Groq
+        {"id": "mixtral-8x7b-32768", "name": "Mixtral 8x7B"},
+        # Gemma on Groq
+        {"id": "gemma2-9b-it", "name": "Gemma 2 9B"},
+        {"id": "gemma-7b-it", "name": "Gemma 7B"},
+    ],
+    ProviderEnum.deepseek: [
+        # DeepSeek V3 (January 2026 - latest)
+        {"id": "deepseek-chat", "name": "DeepSeek Chat (V3)"},
+        {"id": "deepseek-reasoner", "name": "DeepSeek Reasoner (R1)"},
+        # DeepSeek V2.5
+        {"id": "deepseek-coder", "name": "DeepSeek Coder"},
+    ],
+    ProviderEnum.mistral: [
+        # Mistral Large (latest)
+        {"id": "mistral-large-latest", "name": "Mistral Large (Latest)"},
+        {"id": "mistral-large-2411", "name": "Mistral Large 2411"},
+        # Mistral Medium/Small
+        {"id": "mistral-medium-latest", "name": "Mistral Medium"},
+        {"id": "mistral-small-latest", "name": "Mistral Small"},
+        # Open models
+        {"id": "open-mistral-nemo", "name": "Mistral Nemo (12B)"},
+        {"id": "open-mixtral-8x7b", "name": "Mixtral 8x7B"},
+        {"id": "open-mixtral-8x22b", "name": "Mixtral 8x22B"},
+    ],
+    ProviderEnum.cohere: [
+        # Command R series (latest)
+        {"id": "command-r-plus", "name": "Command R+"},
+        {"id": "command-r", "name": "Command R"},
+        # Command series
+        {"id": "command", "name": "Command"},
+        {"id": "command-light", "name": "Command Light"},
+    ],
+    ProviderEnum.perplexity: [
+        # Perplexity models (with search)
+        {"id": "llama-3.1-sonar-large-128k-online", "name": "Sonar Large 128K (Online)"},
+        {"id": "llama-3.1-sonar-small-128k-online", "name": "Sonar Small 128K (Online)"},
+        {"id": "llama-3.1-sonar-large-128k-chat", "name": "Sonar Large 128K (Chat)"},
+        {"id": "llama-3.1-sonar-small-128k-chat", "name": "Sonar Small 128K (Chat)"},
+    ],
+    ProviderEnum.together: [
+        # Meta Llama models
+        {"id": "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo", "name": "Llama 3.1 405B Turbo"},
+        {"id": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo", "name": "Llama 3.1 70B Turbo"},
+        {"id": "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo", "name": "Llama 3.1 8B Turbo"},
+        # Qwen models
+        {"id": "Qwen/Qwen2.5-72B-Instruct-Turbo", "name": "Qwen 2.5 72B Turbo"},
+        {"id": "Qwen/Qwen2.5-7B-Instruct-Turbo", "name": "Qwen 2.5 7B Turbo"},
+        # Mixtral
+        {"id": "mistralai/Mixtral-8x7B-Instruct-v0.1", "name": "Mixtral 8x7B"},
+        {"id": "mistralai/Mixtral-8x22B-Instruct-v0.1", "name": "Mixtral 8x22B"},
     ],
 }
 

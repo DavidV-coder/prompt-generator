@@ -11,9 +11,14 @@ class Settings(BaseSettings):
     # AI Providers API Keys
     openai_api_key: str = ""
     anthropic_api_key: str = ""
+    google_api_key: str = ""
     openrouter_api_key: str = ""
-    xai_api_key: str = ""
-    zai_api_key: str = ""
+    groq_api_key: str = ""
+    deepseek_api_key: str = ""
+    mistral_api_key: str = ""
+    cohere_api_key: str = ""
+    perplexity_api_key: str = ""
+    together_api_key: str = ""
 
     # Default model provider
     default_provider: str = "openai"
