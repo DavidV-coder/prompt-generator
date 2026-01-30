@@ -128,17 +128,6 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     }
   };
 
-  const handleSaveApiKey = (providerId: string) => {
-    const apiKey = apiKeys[providerId];
-    if (apiKey && apiKey.trim()) {
-      localStorage.setItem(`api-key-${providerId}`, apiKey);
-    } else {
-      localStorage.removeItem(`api-key-${providerId}`);
-    }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
-
   const handleSaveAllApiKeys = () => {
     PROVIDERS.forEach(provider => {
       const apiKey = apiKeys[provider.id];
