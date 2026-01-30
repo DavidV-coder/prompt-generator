@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { testApiKey } from '../api/client';
 
 const SYSTEM_PROMPT_KEY = 'prompt-generator-system-prompt';
 const API_URL_KEY = 'prompt-generator-api-url';
@@ -19,7 +20,20 @@ const DEFAULT_PROMPT = `Вы — эксперт по созданию промп
 
 Формат ответа — только список промптов, каждый с новой строки, без нумерации и лишнего текста.`;
 
-type Tab = 'prompt' | 'api';
+const PROVIDERS = [
+  { id: 'openai', name: 'OpenAI', url: 'https://platform.openai.com/api-keys' },
+  { id: 'anthropic', name: 'Anthropic', url: 'https://console.anthropic.com/' },
+  { id: 'google', name: 'Google AI (Gemini)', url: 'https://makersuite.google.com/app/apikey' },
+  { id: 'openrouter', name: 'OpenRouter', url: 'https://openrouter.ai/keys' },
+  { id: 'groq', name: 'Groq', url: 'https://console.groq.com/keys' },
+  { id: 'deepseek', name: 'DeepSeek', url: 'https://platform.deepseek.com/' },
+  { id: 'mistral', name: 'Mistral AI', url: 'https://console.mistral.ai/' },
+  { id: 'cohere', name: 'Cohere', url: 'https://dashboard.cohere.com/api-keys' },
+  { id: 'perplexity', name: 'Perplexity', url: 'https://www.perplexity.ai/settings/api' },
+  { id: 'together', name: 'Together AI', url: 'https://api.together.xyz/settings/api-keys' },
+];
+
+type Tab = 'prompt' | 'api' | 'api-settings';
 
 interface AdminPanelProps {
   onBack: () => void;
@@ -32,6 +46,11 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // API Keys state
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
+  const [testResults, setTestResults] = useState<Record<string, { success: boolean; message: string } | null>>({});
+  const [testing, setTesting] = useState<Record<string, boolean>>({});
+
   // Load saved data on mount
   useEffect(() => {
     const savedPrompt = localStorage.getItem(SYSTEM_PROMPT_KEY);
@@ -42,6 +61,16 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     if (savedUrl) {
       setApiUrl(savedUrl);
     }
+
+    // Load API keys
+    const loadedKeys: Record<string, string> = {};
+    PROVIDERS.forEach(provider => {
+      const key = localStorage.getItem(`api-key-${provider.id}`);
+      if (key) {
+        loadedKeys[provider.id] = key;
+      }
+    });
+    setApiKeys(loadedKeys);
   }, []);
 
   const handleSavePrompt = () => {
@@ -71,6 +100,56 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     } catch (err) {
       console.error('Failed to copy:', err);
     }
+  };
+
+  const handleTestApiKey = async (providerId: string) => {
+    const apiKey = apiKeys[providerId];
+    if (!apiKey || !apiKey.trim()) {
+      setTestResults(prev => ({
+        ...prev,
+        [providerId]: { success: false, message: 'Введите API ключ' }
+      }));
+      return;
+    }
+
+    setTesting(prev => ({ ...prev, [providerId]: true }));
+    setTestResults(prev => ({ ...prev, [providerId]: null }));
+
+    try {
+      const result = await testApiKey({ provider: providerId as any, api_key: apiKey });
+      setTestResults(prev => ({ ...prev, [providerId]: result }));
+    } catch (error: any) {
+      setTestResults(prev => ({
+        ...prev,
+        [providerId]: { success: false, message: error.message || 'Ошибка тестирования' }
+      }));
+    } finally {
+      setTesting(prev => ({ ...prev, [providerId]: false }));
+    }
+  };
+
+  const handleSaveApiKey = (providerId: string) => {
+    const apiKey = apiKeys[providerId];
+    if (apiKey && apiKey.trim()) {
+      localStorage.setItem(`api-key-${providerId}`, apiKey);
+    } else {
+      localStorage.removeItem(`api-key-${providerId}`);
+    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleSaveAllApiKeys = () => {
+    PROVIDERS.forEach(provider => {
+      const apiKey = apiKeys[provider.id];
+      if (apiKey && apiKey.trim()) {
+        localStorage.setItem(`api-key-${provider.id}`, apiKey);
+      } else {
+        localStorage.removeItem(`api-key-${provider.id}`);
+      }
+    });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
 
   const exampleRequest = `{
@@ -122,6 +201,16 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           }`}
         >
           🔌 API
+        </button>
+        <button
+          onClick={() => setTab('api-settings')}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${
+            tab === 'api-settings'
+              ? 'text-primary border-b-2 border-primary'
+              : 'text-gray-400 hover:text-gray-300'
+          }`}
+        >
+          🔑 Настройки API
         </button>
       </div>
 
@@ -250,6 +339,97 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               <li><code className="text-accent">GET /api/providers</code> — список провайдеров и моделей</li>
               <li><code className="text-accent">POST /api/test-api</code> — проверка API ключа</li>
               <li><code className="text-accent">GET /api/health</code> — проверка статуса сервера</li>
+            </ul>
+          </div>
+        </>
+      )}
+
+      {/* API Settings Tab */}
+      {tab === 'api-settings' && (
+        <>
+          <div className="card space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-primary mb-2">Настройка AI провайдеров</h3>
+              <p className="text-sm text-gray-400">
+                Введите API ключи для провайдеров, которые хотите использовать.
+                Нажмите "🔌 Тест" для проверки ключа.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {PROVIDERS.map((provider) => {
+                const testResult = testResults[provider.id];
+                const isSuccess = testResult?.success;
+                const isTesting = testing[provider.id];
+
+                return (
+                  <div key={provider.id} className="border border-surface-light rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-200">{provider.name}</h4>
+                        <a
+                          href={provider.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-accent hover:underline"
+                        >
+                          Получить API ключ →
+                        </a>
+                      </div>
+                      {isSuccess && (
+                        <span className="text-green-500 text-sm">✓ Подключено</span>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <input
+                        type="password"
+                        value={apiKeys[provider.id] || ''}
+                        onChange={(e) => setApiKeys(prev => ({ ...prev, [provider.id]: e.target.value }))}
+                        placeholder={`Введите ${provider.name} API ключ`}
+                        className="input-field flex-1 font-mono text-sm"
+                      />
+                      <button
+                        onClick={() => handleTestApiKey(provider.id)}
+                        disabled={isTesting || !apiKeys[provider.id]?.trim()}
+                        className="px-4 py-2 bg-accent/20 text-accent rounded-lg hover:bg-accent/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
+                      >
+                        {isTesting ? '⏳' : '🔌'} Тест
+                      </button>
+                    </div>
+
+                    {testResult && (
+                      <div className={`text-sm p-2 rounded ${
+                        testResult.success
+                          ? 'bg-green-500/10 text-green-400'
+                          : 'bg-red-500/10 text-red-400'
+                      }`}>
+                        {testResult.message}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={handleSaveAllApiKeys}
+                className="btn-primary flex items-center gap-2"
+              >
+                {saved ? '✓ Сохранено' : '💾 Сохранить все'}
+              </button>
+            </div>
+          </div>
+
+          <div className="card bg-surface-light/30 space-y-3">
+            <h3 className="text-sm font-medium text-gray-300">💡 Рекомендации:</h3>
+            <ul className="text-sm text-gray-400 space-y-2">
+              <li><span className="text-green-400">🆓 Google AI (Gemini)</span> — 60 запросов/мин бесплатно</li>
+              <li><span className="text-green-400">🆓 Groq</span> — очень быстрый, бесплатный лимит</li>
+              <li><span className="text-green-400">🆓 OpenRouter</span> — есть бесплатные модели</li>
+              <li><span className="text-yellow-400">💰 OpenAI</span> — лучшие модели (платно)</li>
+              <li><span className="text-yellow-400">💰 Anthropic</span> — Claude 3.5 Sonnet (платно)</li>
             </ul>
           </div>
         </>
