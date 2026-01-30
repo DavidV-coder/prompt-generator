@@ -21,10 +21,9 @@ FROM nginx:alpine
 # Copy built files
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy nginx config template
-COPY nginx.conf /etc/nginx/templates/default.conf.template
+# Copy nginx config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 8080
 
-# The nginx image will automatically process templates and substitute env vars
-CMD ["/docker-entrypoint.sh", "nginx", "-g", "daemon off;"]
+CMD ["nginx", "-g", "daemon off;"]
