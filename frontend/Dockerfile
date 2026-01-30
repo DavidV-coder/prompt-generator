@@ -21,16 +21,13 @@ FROM nginx:alpine
 # Copy built files
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Copy startup script
-COPY start.sh /start.sh
-RUN chmod +x /start.sh
+# Copy nginx config template
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
 # Railway requires listening on $PORT
 ENV PORT=80
 
 EXPOSE 80
 
-CMD ["/start.sh"]
+# The nginx image will automatically process templates and substitute env vars
+CMD ["/docker-entrypoint.sh", "nginx", "-g", "daemon off;"]
