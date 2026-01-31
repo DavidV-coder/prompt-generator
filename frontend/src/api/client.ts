@@ -8,11 +8,19 @@ import type {
 } from '../types';
 
 // API URL настраивается через localStorage в AdminPanel
-// По умолчанию используем относительный путь для локальной разработки
+// Для production используем Railway backend URL
+const PRODUCTION_API_URL = 'https://prompt-generator-backend-production.up.railway.app';
+
 const getApiBaseUrl = () => {
   if (typeof window !== 'undefined') {
+    // Сначала проверяем localStorage (пользовательская настройка)
     const savedUrl = localStorage.getItem('prompt-generator-api-url');
     if (savedUrl) return savedUrl;
+
+    // В production используем захардкоженный URL
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return PRODUCTION_API_URL;
+    }
   }
   return 'http://localhost:8000'; // для локальной разработки
 };

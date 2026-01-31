@@ -42,7 +42,13 @@ interface AdminPanelProps {
 export function AdminPanel({ onBack }: AdminPanelProps) {
   const [tab, setTab] = useState<Tab>('prompt');
   const [systemPrompt, setSystemPrompt] = useState(DEFAULT_PROMPT);
-  const [apiUrl, setApiUrl] = useState('http://localhost:8000');
+  const getDefaultApiUrl = () => {
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return 'https://prompt-generator-backend-production.up.railway.app';
+    }
+    return 'http://localhost:8000';
+  };
+  const [apiUrl, setApiUrl] = useState(getDefaultApiUrl());
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
 
